@@ -10,8 +10,6 @@ end
 ip = inputParser();
 ip.addParameter('stimlist', {'Dots', 'Gabor', 'Grating', 'FixRsvpStim', 'BackImage'})
 ip.addParameter('overwrite', false)
-ip.addParameter('includeProbe', true)
-ip.addParameter('GazeContingent', true)
 ip.parse(varargin{:});
 stimlist = ip.Results.stimlist;
 overwrite = ip.Results.overwrite;
@@ -28,24 +26,14 @@ for istim = 1:numel(stimlist)
         'debug', false, ...
         'testmode', true, ...
         'eyesmooth', eyesmoothing, ... % bins
-        'includeProbe', ip.Results.includeProbe, ...
+        'includeProbe', true, ...
         'correctEyePos', false, ...
         'nonlinearEyeCorrection', false, ...
         'usePTBdraw', true, ...
-        'GazeContingent', ip.Results.GazeContingent, ...
         'overwrite', overwrite};
     
     options{find(strcmp(options, 'testmode')) + 1} = true;
     fname = io.dataGenerateHdf5(Exp, S, options{:});
-    try
-        h5writeatt(fname, ['/' stimset '/Train/Stim'], 'frate', Exp.S.frameRate)
-        h5writeatt(fname, ['/' stimset '/Train/Stim'], 'center', Exp.S.centerPix)
-        h5writeatt(fname, ['/' stimset '/Train/Stim'], 'viewdist', Exp.S.screenDistance)
-        
-        h5writeatt(fname, ['/' stimset '/Test/Stim'], 'frate', Exp.S.frameRate)
-        h5writeatt(fname, ['/' stimset '/Test/Stim'], 'center', Exp.S.centerPix)
-        h5writeatt(fname, ['/' stimset '/Test/Stim'], 'viewdist', Exp.S.screenDistance)
-    end
     
     options{find(strcmp(options, 'testmode')) + 1} = false;
     fname = io.dataGenerateHdf5(Exp, S, options{:});

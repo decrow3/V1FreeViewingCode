@@ -7,6 +7,10 @@ function stat = tuning_empirical(D, varargin)
 %   binsize
 %   win
 
+% DPR edit ln 190, 5-26-22 nsamp=min([numel(runinds) numel(statinds)]);
+% Edit to continue matching number of samples in running and stationary
+% conditions, but allow there to be more running than stationary trials
+
 ip = inputParser();
 ip.addParameter('binsize', 10e-3)
 ip.addParameter('win', [-.25 1.1])
@@ -185,9 +189,10 @@ for cc = 1:NC % cells
         runmu = zeros(nlags, nboot);
         statmu = zeros(nlags, nboot);
         for iboot = 1:nboot
-            bootinds = randsample(runinds, numel(runinds), true);
+            nsamp=min([numel(runinds) numel(statinds)]);
+            bootinds = randsample(runinds, nsamp, true);
             runmu(:,iboot) = squeeze(mean(spks(bootinds,cc,:),1));
-            bootinds = randsample(statinds, numel(runinds), true);
+            bootinds = randsample(statinds, nsamp, true);
             statmu(:,iboot) = squeeze(mean(spks(bootinds,cc,:),1));
         end
         
@@ -300,7 +305,7 @@ stat.running = repmat(struct('spikerate', [], ...
     'rateRun', []), NC, 1);
 
 for cc = 1:NC
-
+    disp(cc)
     figure(1); clf
     
     unitix = find(dfiltT(:,cc));
@@ -344,6 +349,11 @@ for cc = 1:NC
     % throw out epochs that
     onsetix = find((onsets(2:end) - offsets(1:end-1)) > PreRunStatDur & (offsets(2:end) - onsets(2:end)) > RunDur) + 1;
     
+    if isempty(onsetix)
+        continue
+    end
+    
+    
     nr = numel(onsetix);
     for i = 1:nr
         h(3) = fill([onsets(onsetix(i)*[1 1]); offsets(onsetix(i)*[1 1])]', [ylim, fliplr(ylim)]', 'r', 'FaceAlpha', .25, 'EdgeColor', 'none'); hold on
@@ -360,7 +370,7 @@ for cc = 1:NC
         an = eventTriggeredAverage(sprate, randi(numel(isrunning), [nr 1]), rwin);
         annull(:,iboot) = an;
     end
-    
+
     [an,sd] = eventTriggeredAverage(sprate, onsets(onsetix), rwin);
     rlags = (rwin(1):rwin(2))*dt;
     
@@ -550,7 +560,7 @@ for cc = 1:NC
     
     % STATIONARY
     iix = ~runningTrial & unitix;
-    spk = squeeze(spks(iix,cc,:));
+    spk = reshape(spks(iix,cc,:),[],size(spks,3));
     th = D.GratingDirections(iix);
 
     tix = lags > win(1) & lags < win(2);

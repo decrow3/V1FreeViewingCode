@@ -32,10 +32,10 @@ else
 
 
     EventFiles = dir([DataFolder,filesep,'*.events']);
-    ext = 'events';
-    HASEPHYS = true;
 
-    if isempty(EventFiles)
+    if ~isempty(EventFiles)
+        ext = 'events';
+        HASEPHYS = true;
         EventFiles = dir(fullfile(DataFolder,'*.kwe'));
         if ~isempty(EventFiles)
             ext = 'kwe';
@@ -43,6 +43,14 @@ else
         else
             fprintf(fid, 'basic_marmoview_import: No ephys found\n');
         end
+%     else %try 
+%         ext = 'timestamps';
+%         HASEPHYS = true;
+%         EventFiles = dir(fullfile(DataFolder,'timestamps.mat'));
+%         fprintf(fid, 'Reading strobe times from [%s] timestamp file\n', EventFiles(1).name);
+%         eventdata=load([DataFolder filesep EventFiles.name]);
+%         strobes = eventdata.full_words;
+%         tstrobes = eventdata.timestamps;
     end
 
 
@@ -51,13 +59,15 @@ else
             case 'events'
                 fprintf(fid, 'Reading strobe times from [%s] .events file\n', EventFiles(1).name);
                 [evdata,evtime,evinfo] = read_ephys.load_open_ephys_data_faster([DataFolder,filesep,EventFiles(1).name]);
+                %**** convert events into strobes with times
+                [tstrobes,strobes] = read_ephys.convert_data_to_strobes(evdata,evtime,evinfo);
             case 'kwe'
                 fprintf(fid, 'Reading strobe times from [%s] .kwe file\n', EventFiles(1).name);
                 [evdata,evtime,evinfo] = read_ephys.load_kwe(fullfile(DataFolder,EventFiles(1).name));
                 evtime = double(evtime) / ip.Results.EphysFreq; % convert to seconds
+                %**** convert events into strobes with times
+                [tstrobes,strobes] = read_ephys.convert_data_to_strobes(evdata,evtime,evinfo);
         end
-        %**** convert events into strobes with times
-        [tstrobes,strobes] = read_ephys.convert_data_to_strobes(evdata,evtime,evinfo);
         strobes = read_ephys.fix_missing_strobes(strobes);
         fprintf(fid, 'Strobes are loaded\n');
 

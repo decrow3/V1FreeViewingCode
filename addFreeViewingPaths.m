@@ -91,6 +91,27 @@ switch user
         marmoPipePath = [];
         dataPath = '~/Marmo/Data';
         
+    case 'ucla1'
+        % we need marmoview in the path for the stimulus objects to
+        % regenerate properly
+        marmoViewPath = '~/Documents/MATLAB/MarmoV5/';
+        % we only need marmopipe to import raw data
+        marmoPipePath = '~/Documents/MATLAB/MarmoPipe/'; %'~/Dropbox/MarmoLabWebsite/PSA/Code/';
+        % where the data live
+        dataPath = '~/Dropbox/Projects/FreeViewing/Data';
+        
+        marmoViewPath = '/home/huklab/Documents/NPX_pilot/MarmoV5';
+        marmoPipePath = '/home/huklab/Documents/NPX_pilot/MarmoPipe';
+        dataPath = '/media/huklab/Data/NPX/HuklabTreadmill/';
+        
+  
+        % processed data:
+        setpref('FREEVIEWING', 'PROCESSED_DATA_DIR', dataPath)
+        %setpref('FREEVIEWING', 'SERVER_DATA_DIR', '/Volumes/mitchelllab/Data/')
+       % setpref('FREEVIEWING', 'HUKLAB_DATASHARE', '~/Google Drive/HuklabTreadmill/')
+        %setpref('FREEVIEWING', 'HUKLAB_DATASHARE', 'H:\.shortcut-targets-by-id\1te-Fna8YGaocWpO9rfNSoLtLeuzSNCPq\HuklabTreadmill\')
+        setpref('FREEVIEWING', 'SERVER_DATA_DIR', dataPath)
+
     case 'gabelaptop'
         
         marmoViewPath = [];

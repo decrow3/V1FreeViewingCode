@@ -8,7 +8,6 @@ if nargin < 1
         'FixRsvpStim', ...
         'FixCalib', ...
         'ForageStaticLines', ...
-        'FixFlashGabor', ...
         'MTDotMapping', ...
         'DriftingGrating'};
     fprintf('%s\n', stimList{:})
@@ -36,7 +35,13 @@ switch stimulusSet
     case {'Grating'}
         validTrials = intersect(find(strcmp(trialProtocols, 'ForageProceduralNoise')), ephysTrials);
 
-        validTrials = validTrials(cellfun(@(x) x.PR.noisetype==1, Exp.D(validTrials)));
+        validTrials = validTrials(cellfun(@(x) (x.PR.noisetype==1), Exp.D(validTrials)));
+
+    case {'StaticGabor'}
+        % Forage trials
+        validTrials = intersect(find(strcmp(trialProtocols, 'FixedProceduralNoise')), ephysTrials);
+
+        validTrials = validTrials(cellfun(@(x) x.PR.noisetype==4, Exp.D(validTrials)));
         
     case {'Gabor'}
         % Forage trials
@@ -47,6 +52,17 @@ switch stimulusSet
     case {'BigDots'}
         % Forage trials
         validTrials = intersect(find(strcmp(trialProtocols, 'ForageProceduralNoise')), ephysTrials);
+
+        % dot spatial noise trials
+        validTrials = validTrials(cellfun(@(x) x.PR.noisetype==5, Exp.D(validTrials)));
+
+        dotSize = cellfun(@(x) x.P.dotSize, Exp.D(validTrials));
+        validTrials = validTrials(dotSize==max(dotSize));
+
+
+    case {'StaticDots'}
+        % Forage trials
+        validTrials = intersect(find(strcmp(trialProtocols, 'FixedProceduralNoise')), ephysTrials);
 
         % dot spatial noise trials
         validTrials = validTrials(cellfun(@(x) x.PR.noisetype==5, Exp.D(validTrials)));
@@ -74,10 +90,21 @@ switch stimulusSet
     case {'BackImage'}
         validTrials = intersect(find(strcmp(trialProtocols, 'BackImage')), ephysTrials);
     
+    case {'BackVideo'}
+        validTrials = intersect(find(strcmp(trialProtocols, 'BackVideo')), ephysTrials);
+
+    case {'BackImages'}
+        validTrials = intersect(find(strcmp(trialProtocols, 'BackImages')), ephysTrials);
+    
+    case {'AllBackImages'}
+        validTrials = intersect(find(strcmp(trialProtocols, 'BackImage')), ephysTrials);
+        validTrials2 = intersect(find(strcmp(trialProtocols, 'BackImages')), ephysTrials);
+        validTrials = union(validTrials, validTrials2);
+        validTrials = intersect(validTrials, ephysTrials);
     case {'DriftingGrating'}
         validTrials = intersect(find(strcmp(trialProtocols, 'ForageProceduralNoise')), ephysTrials);
 
-        validTrials = validTrials(cellfun(@(x) x.PR.noisetype==6, Exp.D(validTrials)));
+        validTrials = validTrials(cellfun(@(x) (x.PR.noisetype==6)||(x.PR.noisetype==10), Exp.D(validTrials)));
         
     case {'Forage'}
         
@@ -99,11 +126,6 @@ switch stimulusSet
         
         validTrials = intersect(find(strcmp(trialProtocols, 'Forage')), ephysTrials);
         validTrials = validTrials(cellfun(@(x) x.PR.noisetype==5, Exp.D(validTrials)));
-    
-    case {'FixFlashGabor'}
-        validTrials = intersect(find(strcmp(trialProtocols, 'FixFlash_ProceduralNoise')), ephysTrials);
-        validTrials = validTrials(cellfun(@(x) x.PR.noisetype==4, Exp.D(validTrials)));
-        
     case {'All'}
         % use all valid conditions (BackImage or
         validTrials = find(strcmp(trialProtocols, 'BackImage') | strcmp(trialProtocols, 'ForageProceduralNoise'));

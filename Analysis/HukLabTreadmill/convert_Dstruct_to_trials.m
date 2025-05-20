@@ -29,7 +29,7 @@ warning off
 
 circdiff = @(x,y) angle(exp(1i*(x - y)/180*pi))/pi*180;
 
-grating_duration = mode(D.GratingOffsets-D.GratingOnsets);
+grating_duration = median(D.GratingOffsets-D.GratingOnsets);
 fprintf('Grating Duration %02.2f s\n', grating_duration)
 if isnan(grating_duration) || grating_duration < .1
     Stim = [];
@@ -41,7 +41,9 @@ if isempty(D.frameTimes)
     return
 end
 
-num_trials = numel(D.GratingOnsets);
+droppedtrials=((D.GratingOffsets-D.GratingOnsets)<0.1);
+
+num_trials = numel(D.GratingOnsets)-sum(droppedtrials);
 trial_time = -pre_stim:bin_size:(grating_duration + post_stim);
 num_bins = numel(trial_time);
 
@@ -71,12 +73,13 @@ eyeProj = cell(num_trials,1);
 % end
 if ip.Results.shuffle
     rng(1)
-    trial_idx = randperm(num_trials);
+    trial_idx = randperm(numel(D.GratingOnsets));
 else
-    trial_idx = 1:num_trials;
+    trial_idx = 1:numel(D.GratingOnsets);
 end
-
-trial_idx = trial_idx(~isnan(D.GratingOffsets(trial_idx)));
+%removed dropped
+trial_idx = trial_idx(~droppedtrials);
+trial_idx = trial_idx(~isnan(D.GratingOffsets(trial_idx))); % also exclude
 
 for itrial = 1:num_trials
 %     fprintf('Trial %d/%d\n', itrial, num_trials)

@@ -50,6 +50,11 @@ if isempty(VpxFiles)
             end
             
             badsamples = (diff(Exp.vpx.raw(:,1))==0);
+
+%% Zero samples are bad samples with OpenIris
+badsamples = ([badsamples; 0])|(Exp.vpx.raw(:,2)==0)|(Exp.vpx.raw(:,3)==0);
+%%
+
             Exp.vpx.raw(badsamples,:) = [];
             badsamples = Exp.vpx.raw(:,1)==0;
             Exp.vpx.raw(badsamples,:) = [];
@@ -59,12 +64,16 @@ if isempty(VpxFiles)
             % eliminate double samples (this shouldn't do anything)
             [~,ia] =  unique(Exp.vpx.raw(:,1));
             Exp.vpx.raw = Exp.vpx.raw(ia,:);
-            
+
+            Exp.vpx.raw0= Exp.vpx.raw;
+
+
+
             % upsample eye traces to 1kHz
             new_timestamps = Exp.vpx.raw(1,1):1e-3:Exp.vpx.raw(end,1);
             new_EyeX = interp1(Exp.vpx.raw(:,1), Exp.vpx.raw(:,2), new_timestamps);
             new_EyeY = interp1(Exp.vpx.raw(:,1), Exp.vpx.raw(:,3), new_timestamps);
-            new_Pupil = interp1(Exp.vpx.raw(:,1), Exp.vpx.raw(:,4), new_timestamps);
+            new_Pupil = interp1(Exp.vpx.raw0(:,1), Exp.vpx.raw0(:,4), new_timestamps);
             bad = interp1(Exp.vpx.raw(:,1), double(Exp.vpx.raw(:,2)>31e3), new_timestamps);
             Exp.vpx.raw = [new_timestamps(:) new_EyeX(:) new_EyeY(:) new_Pupil(:)];
             
@@ -105,6 +114,31 @@ for zk = FileSort(:,1)'
         vpx = read_vpx.load_vpx_file(vpx_filename);
     end
     if ~isempty(vpx)
+        %Normalise all files if called for
+        if ip.Results.zero_mean
+            lost_track = vpx.raw(:,2)==max(vpx.raw(:,2)) | vpx.raw(:,3)==max(vpx.raw(:,3));
+
+            dx=[(diff(vpx.raw(:,2))); 0];
+            dy=[(diff(vpx.raw(:,3))); 0];
+
+            % Choosing .2 as a threshold, I don't know how well this
+            % will be conserved across experiments, DPR 5-22-22
+
+            assert(sum(abs(dx)>.2)/numel(dx)<.1,'import_eye_position: many large jumps are being removed, check the threshold')
+            jump_track=(abs(dx)>.2)|(abs(dy)>.2);
+            lost_track=lost_track|jump_track;
+
+            %Use median instead of mean as offsets can be off centered
+            vpx.raw(~lost_track,2) = vpx.raw(~lost_track,2) - median(vpx.raw(~lost_track,2));
+            vpx.raw(~lost_track,3) = vpx.raw(~lost_track,3) - median(vpx.raw(~lost_track,3));
+
+            if ip.Results.normalize
+                vpx.raw(~lost_track,2) = vpx.raw(~lost_track,2) / std(vpx.raw(~lost_track,2));
+                vpx.raw(~lost_track,3) = vpx.raw(~lost_track,3) / std(vpx.raw(~lost_track,3));
+            end
+        end
+        
+        
         if ~BigN
             Exp.vpx = vpx;
         else
@@ -115,18 +149,9 @@ for zk = FileSort(:,1)'
                 vpx.tstrobes = vpx.tstrobes + BigN;
             end
 
-            if ip.Results.zero_mean
-                lost_track = vpx.raw(:,2)==max(vpx.raw(:,2)) | vpx.raw(:,3)==max(vpx.raw(:,3));
-                
-                vpx.raw(~lost_track,2) = vpx.raw(~lost_track,2) - mean(vpx.raw(~lost_track,2));
-                vpx.raw(~lost_track,3) = vpx.raw(~lost_track,3) - mean(vpx.raw(~lost_track,3));
 
-                if ip.Results.normalize
-                    vpx.raw(~lost_track,2) = vpx.raw(~lost_track,2) / std(vpx.raw(~lost_track,2));
-                    vpx.raw(~lost_track,3) = vpx.raw(~lost_track,3) / std(vpx.raw(~lost_track,3));
-                end
-
-            end
+            
+            
             %******* concatenate large file stream **********
             Exp.vpx.raw = [Exp.vpx.raw ; vpx.raw];
             filenum = [filenum; zk*ones(size(vpx.raw, 1), 1)];
@@ -196,6 +221,7 @@ breaks = find(diff(vpxstarts)<0);
 if any(breaks)
     newt = Exp.vpx.raw(:,1); % initialize new timestamps to modify
     tbreaks = find(diff(newt) < 0);
+    
     tstart = [1; tbreaks+1];
     tstop = [tbreaks; numel(newt)];
 
@@ -205,6 +231,7 @@ if any(breaks)
     
     nbreaks = numel(startinds);
     assert(nbreaks == numel(tstart), 'import_eye_position: different number of breaks in the file between strobe times and raw clock')
+    
     
     for iibr = 1:nbreaks
         
@@ -436,5 +463,4 @@ vy = vy * Fs;
 
 spd = hypot(vx, vy);
 Exp.vpx.smo = [vtt vxxd vyyd vpp vx vy spd];
-
 

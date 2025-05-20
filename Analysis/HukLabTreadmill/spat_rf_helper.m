@@ -36,7 +36,7 @@ ip.addParameter('debug', false)
 ip.addParameter('eyePos', [])
 ip.addParameter('stimList', {'BigDots'})
 ip.addParameter('fit_gaussian', false)
-ip.addParameter('firing_rate_thresh', 1)
+ip.addParameter('firing_rate_thresh', .1)
 ip.parse(varargin{:})
 
 %% build stimulus matrix for spatial mapping

@@ -126,7 +126,8 @@ end
 eyeDat(:,1) = Exp.vpx2ephys(eyeDat(:,1));
 
 % find index into frames
-[~, ~,id] = histcounts(frameTimes, eyeDat(:,1));
+%adding ~isnan DPR 9/25
+[~, ~,id] = histcounts(frameTimes, eyeDat(~isnan(eyeDat(:,1)),1));
 if any(id==0)
     id((id==0)) = max(id);
 end

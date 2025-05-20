@@ -13,7 +13,7 @@ classdef calibGUI < handle
         Exp % Exp struct
         xy % eye position
         spd % eye speed
-        cmat = [1 1 0 0 0 ] % [scale x, scale y, rotation, offset x, offset y]
+        cmat = [10 10 0 0 0 ] % [scale x, scale y, rotation, offset x, offset y]
         loss
         id
         validix
@@ -66,7 +66,6 @@ classdef calibGUI < handle
         function initialize(obj)
             
             validTrials = io.getValidTrials(obj.Exp, 'FaceCal');
-            
             tstart = obj.Exp.ptb2Ephys(cellfun(@(x) x.STARTCLOCKTIME, obj.Exp.D(validTrials)));
             tstop = obj.Exp.ptb2Ephys(cellfun(@(x) x.ENDCLOCKTIME, obj.Exp.D(validTrials)));
             
@@ -74,9 +73,12 @@ classdef calibGUI < handle
             eyeTime = obj.Exp.vpx2ephys(obj.Exp.vpx.(obj.raw_field)(:,1));
             obj.validix = getTimeIdx(eyeTime, tstart, tstop);
             
-            
+            %Got some nan numbers? adding DPR 6/5/2023
+            obj.validix(all(isnan(obj.Exp.vpx.(obj.raw_field)(obj.validix,2:3)),2))=0;
+
             obj.xy = obj.Exp.vpx.(obj.raw_field)(obj.validix,2:3);
-            
+
+           
             obj.spd = abs(obj.Exp.vpx.smo(obj.validix,7));
             
             obj.trialTargets = cellfun(@(x) x.PR.faceconfig(:,1:2), obj.Exp.D(validTrials), 'uni', 0);
@@ -87,15 +89,18 @@ classdef calibGUI < handle
             % -- initialize calibration
             n = sum(obj.validix);
             ix = true(n,1);
+
+           
+%             ix = all(abs(zscore(obj.xy(ix,:)))<1,2); % remove outliers
             ix = all(abs(zscore(obj.xy(ix,:)))<1,2); % remove outliers
-            ix = ix & ( obj.spd / median(obj.spd) < .5); % find fixations
-            
+%             ix = ix & ( obj.spd / median(obj.spd) < .5); % find fixations
+            ix = ix & ( obj.spd / median(obj.spd) < .1); % find fixations
             % bin on grid
             [C, xax, yax] = histcounts2(obj.xy(ix,1), obj.xy(ix,2), 1000);
             [xx,yy] = meshgrid(xax(1:end-1), yax(1:end-1));
             
             % smooth binning (like a kernel density estimate)
-            I =  imgaussfilt(C', 10);
+            I =  imgaussfilt(C', 5);
 
             % softmax to find center
             wts = I(:).^9 / sum(I(:).^9);
@@ -240,15 +245,19 @@ classdef calibGUI < handle
             
             n = sum(obj.validix);
             ix = true(n,1);
-            ix = all(abs(zscore(obj.xy(ix,:)))<1,2); % remove outliers
-            ix = ix & ( obj.spd / nanmedian(obj.spd) < 2); % find fixations
-            
+%             ix = all(abs(zscore(obj.xy(ix,:)))<1,2); % remove outliers
+%             ix = ix & ( obj.spd / nanmedian(obj.spd) < 2); % find fixations
+            %ix = all(abs(zscore(obj.xy(ix,:)))<1,2); % remove outliers
+            ix = all(abs(zscore(obj.xy(ix,:)))<5,2); % remove outliers
+%             ix = ix & ( obj.spd / median(obj.spd) < .1); % find fixations
             % check loss
+            ix = ix & ( obj.spd / median(obj.spd) < 2); % find fixations
             [obj.loss, obj.id] = calibration_loss([1 1 0 0 0], obj.xy(ix,:), obj.targets);
             
             hold(obj.H.xpos, 'off')
             
             [C, xax, yax] = histcounts2(obj.xy(ix,1), obj.xy(ix,2), 1000);
+            [xx,yy] = meshgrid(xax(1:end-1), yax(1:end-1));
             
             % smooth binning (like a kernel density estimate)
             I =  imgaussfilt(C', 10);
@@ -375,6 +384,8 @@ classdef calibGUI < handle
 %             eyePos = obj.Exp.vpx.(obj.raw_field)(:,2:3);
             
             dxdy = diff(eyePos); % velocity
+            dxdy = [diff(eyePos); [0 0]]; %append to match length
+            
             obj.spd = hypot(dxdy(:,1), dxdy(:,2)); % speed
             
             fixatedLoss = [];
@@ -666,7 +677,7 @@ classdef calibGUI < handle
             disp(k.Key)
             switch k.Key
                 case 'rightarrow'
-                    obj.cmat(4) = obj.cmat(4) - .001;
+                    obj.cmat(4) = obj.cmat(4) - .01;
                     th = obj.cmat(3);
                     R = [cosd(th) -sind(th); sind(th) cosd(th)];
                     S = [obj.cmat(1) 0; 0 obj.cmat(2)];
@@ -678,7 +689,7 @@ classdef calibGUI < handle
                     plot_calibration(obj);
                     
                 case 'leftarrow'
-                    obj.cmat(4) = obj.cmat(4) + .001;
+                    obj.cmat(4) = obj.cmat(4) + .01;
                     th = obj.cmat(3);
                     R = [cosd(th) -sind(th); sind(th) cosd(th)];
                     S = [obj.cmat(1) 0; 0 obj.cmat(2)];
@@ -689,7 +700,7 @@ classdef calibGUI < handle
                     
                     plot_calibration(obj);
                 case 'uparrow'
-                    obj.cmat(5) = obj.cmat(5) + .001;
+                    obj.cmat(5) = obj.cmat(5) + .01;
                     th = obj.cmat(3);
                     R = [cosd(th) -sind(th); sind(th) cosd(th)];
                     S = [obj.cmat(1) 0; 0 obj.cmat(2)];
@@ -701,7 +712,7 @@ classdef calibGUI < handle
                     plot_calibration(obj);
                     
                 case 'downarrow'
-                    obj.cmat(5) = obj.cmat(5) - .001;
+                    obj.cmat(5) = obj.cmat(5) - .01;
                     th = obj.cmat(3);
                     R = [cosd(th) -sind(th); sind(th) cosd(th)];
                     S = [obj.cmat(1) 0; 0 obj.cmat(2)];

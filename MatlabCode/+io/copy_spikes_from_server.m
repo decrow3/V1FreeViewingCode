@@ -11,10 +11,6 @@ end
 serverDir = getpref('FREEVIEWING', 'SERVER_DATA_DIR');
 dataPath = getpref('FREEVIEWING', 'PROCESSED_DATA_DIR');
 
-if strcmp(serverDir, dataPath)
-    return
-end
-
 fvpath = fileparts(which('addFreeViewingPaths'));
 data = readtable(fullfile(fvpath, 'Data', 'datasets.xls'));
 

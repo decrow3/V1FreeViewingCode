@@ -34,11 +34,18 @@ else
         pos = Exp.D{iTrial}.treadmill.locationSpace(:,4); % convert to meters
         ttime = Exp.D{iTrial}.treadmill.locationSpace(:,1);
         
+        bad=isnan(pos)|isnan(ttime);
+        pos=pos(~bad);
+        ttime=ttime(~bad);
+
         % find the initial messed up period
         init = find(diff(diff(pos)==0)==-1, 1)+1;
         if isempty(init)
             init = 3; % third sample
         end
+
+        %Bypass - dpr 6/5/2023
+        %init=min([3, length(pos)-1]);
         trialStart = ttime(init);
         
         
@@ -74,7 +81,8 @@ else
         
         
         bad = isnan(Exp.D{iTrial}.treadmill.locationSpace(treadIx,2));
-        bad = imboxfilt(double(bad), 101)>0;
+        %tmp removing for VSS 19/5/2024
+        %bad = imboxfilt(double(bad), 101)>0;
         spd(bad) = nan;
         
         ttime(bad) = nan;
@@ -260,6 +268,7 @@ if ip.Results.truncate
     fprintf("Removing %d eye pos samples that occured before the first spike or after the last\n", sum(ix));
     D.treadTime(ix) = [];
     D.treadSpeed(ix) = [];
+    D.treadPos(ix) = []; %DPR added 10/2024
     
     ix = D.frameTimes > lastOffset | D.frameTimes < firstOnset;
     fprintf("Removing %d frames that occured outside before the first spike or after the last\n", sum(ix));

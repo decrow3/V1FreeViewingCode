@@ -108,6 +108,11 @@ for cc = 1:NC
     onsets = D.GratingOnsets(gtix);
     winsize = mode(D.GratingOffsets(gtix) - D.GratingOnsets(gtix));
 
+    if winsize==0
+    disp('SOMETHING IS WRONG WITH THE ONSET AND OFFSET TIMES!!')
+    winsize = median(D.GratingOffsets(gtix) - D.GratingOnsets(gtix));
+    end
+
     t0 = min(onsets) - 2*winsize;
     st = D.spikeTimes(unitix) - t0;
     onsets = onsets - t0;

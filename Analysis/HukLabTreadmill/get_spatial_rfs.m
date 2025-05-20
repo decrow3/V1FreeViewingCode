@@ -6,8 +6,8 @@ BIGROI = [-30 -10 30 10];
 binSize = .5;
 Frate = 30;
 spike_rate_thresh = 1;
-thresh = 4; % z threshold for pixels to count as possibly in the RF
-
+%thresh = 4; % z threshold for pixels to count as possibly in the RF
+thresh = 1; % z threshold for pixels to count as possibly in the RF
 eyePos = Exp.vpx.smo(:,2:3);
 
 %%

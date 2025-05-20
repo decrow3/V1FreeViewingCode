@@ -8,7 +8,7 @@ function varargout = forwardCorrelation(Stim, Robs, win, inds, nbasis, validonly
 % 
 
 NT = size(Stim, 1);
-if nargin < 5 || isempty(validonly)
+if nargin < 6 || isempty(validonly)
     validonly = true;
 end
 

@@ -42,9 +42,10 @@ drawnow
 end
 
 dfs = reshape(dfs, [], NC);
+%%
 % figure(2); clf
 % plot(zscore(Rt(:,cc)))
-% end
+
 
 %% 
 [~, ind] = sort(var(Rt)./sum(Rt), 'descend');
@@ -69,7 +70,7 @@ end
 % build design matrix
 opts = struct();
 assert(Stim.bin_size==1/60, 'Parameters have only been set for 60Hz sampling')
-opts.collapse_speed = true;
+opts.collapse_speed = false;
 opts.collapse_phase = true;
 opts.include_onset = false;
 opts.stim_dur = median(D.GratingOffsets-D.GratingOnsets) + 0.2; % length of stimulus kernel
@@ -89,7 +90,7 @@ plot(Bt)
 [X, opts] = build_design_matrix(Stim, opts);
 
 
-% concatenate full design matrix
+%% concatenate full design matrix
 
 
 label = 'Stim';
@@ -219,7 +220,8 @@ for iModel = find(ismember(modelNames, models2fit))
     exclude = [excludeParams{iModel} alwaysExclude];
     modelLabels = setdiff(regLabels, exclude); %#ok<*NASGU>
 %     evalc("[Vfull, fullBeta, ~, fullIdx, fullRidge, fullLabels] = crossValModel(fullR(good_inds,:), Robs(good_inds,:)', modelLabels, regIdx, regLabels, folds, dataIdxs);");
-    [Vfull, fullBeta, ~, fullIdx, fullRidge, fullLabels] = crossValModel((fullR(good_inds,:)), Robs(good_inds,:)', modelLabels, regIdx, regLabels, folds, dataIdxs, dfs(good_inds,:));
+    %[Vfull, fullBeta, ~, fullIdx, fullRidge, fullLabels] = crossValModel((fullR(good_inds,:)), Robs(good_inds,:)', modelLabels, regIdx, regLabels, folds, dataIdxs, dfs(good_inds,:));
+    [Vfull, fullBeta, ~, fullIdx, fullRidge, fullLabels] = crossValModel((fullR(good_inds,:)), Robs(good_inds,:)', modelLabels, regIdx, regLabels, folds, dataIdxs); %my version of crossval doesn't have datafilters
     Rpred.(modelNames{iModel}).Rpred = Vfull;
     Rpred.(modelNames{iModel}).Offset = cell2mat(cellfun(@(x) x(1,:), fullBeta(:), 'uni', 0));
     for i = 1:numel(fullBeta)
@@ -261,6 +263,7 @@ ii = ii + 1;
 cc = ind(ii);
 % X = [fullR(good_inds,:) 
 
+NT = numel(good_inds);
 
 Rpred.(model).Gains = nan(folds, 2, NC);
 Rpred.(model).Rpred = nan(NC, NT);
@@ -293,6 +296,9 @@ for ifold = 1:folds
     Rpred.(model).Gains(ifold,:,cc) = Gain;
     Rpred.(model).Ridge(ifold,cc) = Ridge;
     Rpred.(model).Rpred(cc,test_inds) = Rhat(test_inds);
+
+
+    Rpred.(model).Rsquared(cc) = rsquared(Robs(good_inds,cc), Rpred.(model).Rpred(cc,:)'); %compute explained variance  
 end
 
 r2 = rsquared(Robs(good_inds,cc), Rpred.(model).Rpred(cc,:)');
@@ -519,7 +525,7 @@ for iModel = 1%:numel(GainTerm)
     
 end
 %% Get stimulus prediction to create running-dependent regressor
-model = 'stimsac';
+model = 'RunningGain';
 
 NT = numel(good_inds);
 assert(NT == size(dataIdxs,2), 'Number of samples does not match')

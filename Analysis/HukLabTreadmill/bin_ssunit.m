@@ -55,13 +55,51 @@ newTreadSpeed = interp1(treadTime, treadSpeed, newTreadTime);
 newFrameTime = newTreadTime;
 newFramePhase = interp1(frameTime, framePhase, newFrameTime);
 
-pupil = nan(size(newFrameTime));
+
 eyeIx = ismember(D.sessNumEye, sessNums) & ~isnan(D.eyePos(:,3));
+eyeSess = D.sessNumEye(eyeIx);
 eyeTime = D.eyeTime(eyeIx);
 eyePupil = D.eyePos(eyeIx,3);
+eyeX = D.eyePos(eyeIx,1);
+eyeY = D.eyePos(eyeIx,2);
+eyeLabels = D.eyeLabels(eyeIx);
+
+pupil = nan(size(newFrameTime));
+eyeX_ = nan(size(newFrameTime));
+eyeY_ = nan(size(newFrameTime));
+eyeLabels_ = nan(size(newFrameTime));
+eyeSess_ = nan(size(newFrameTime));
+
+%DPR edit - need to put all eye data onto same indices as frame time for
+%iix in loop later
+
 if ~isempty(eyePupil)
+    if sum(isnan(eyeTime))>0
+        badeyetime=isnan(eyeTime);
+        eyeTime=eyeTime(~badeyetime);
+        eyePupil=eyePupil(~badeyetime);
+        eyeX=eyeX(~badeyetime);
+        eyeY=eyeY(~badeyetime);
+        eyeLabels=eyeLabels(~badeyetime);
+        eyeSess=eyeSess(~badeyetime);
+    end
     pupil = interp1(eyeTime,eyePupil,newFrameTime);
+    eyeX_ = interp1(eyeTime,eyeX,newFrameTime);
+    eyeY_ = interp1(eyeTime,eyeY,newFrameTime);
+    eyeLabels_ = interp1(eyeTime,eyeLabels,newFrameTime,'nearest');
+    eyeSess_ = interp1(eyeTime,eyeSess,newFrameTime);
 end
+
+%If newFrameTime creates time points between sessions interpolant will 
+% have a non integer session number
+unsupported=eyeSess_~=round(eyeSess_);
+pupil(unsupported)=nan;
+eyeX_(unsupported)=nan;
+eyeY_(unsupported)=nan;
+eyeLabels_(unsupported)=nan;
+eyeSess_(unsupported)=nan;
+newTreadSpeed(unsupported)=nan;
+newFramePhase(unsupported)=nan;
 
 treadTime = newTreadTime;
 treadSpeed = newTreadSpeed;
@@ -100,6 +138,9 @@ opts.NLags = nbins;
 runSpeed = nan(NT, nbins);
 GratPhase = nan(NT, nbins);
 PupilArea = nan(NT, nbins);
+eyeFlag = nan(NT, nbins);
+eyePosX = nan(NT, nbins);
+eyePosY = nan(NT, nbins);
 nt = numel(treadSpeed);
 
 for i = 1:NT
@@ -108,6 +149,9 @@ for i = 1:NT
     runSpeed(i,valid) = treadSpeed(iix(valid));
     GratPhase(i,valid) = framePhase(iix(valid));
     PupilArea(i,valid) = pupil(iix(valid));
+    eyeFlag(i,valid) = eyeLabels_(iix(valid));
+    eyePosX(i,valid) = eyeX_(iix(valid));
+    eyePosY(i,valid) = eyeY_(iix(valid));
 end
 
 SpikeTimes = D.spikeTimes(unitIx);
@@ -155,6 +199,6 @@ end
 % output
 stim = {StimDir, StimSpeed, StimFreq};
 robs = scnt;
-behavior = {runSpeed, GratPhase, PupilArea};
+behavior = {runSpeed, GratPhase, PupilArea, eyeFlag, eyePosX, eyePosY};
 opts.lags = bins;
 opts.binsize = binsize;

@@ -2,7 +2,7 @@
 % The FREEVIEWING codebase uses matlab preferences to manage paths (so
 % different users can have different paths)
 
-addFreeViewingPaths('jakelaptop') % switch to your user
+addFreeViewingPaths('ucla1') % switch to your user
 addpath Analysis/HukLabTreadmill/ % the code will always assume you're running from the FreeViewing base directory
 
 %% Step 1: Make sure a session is imported
@@ -18,7 +18,7 @@ sesslist = io.dataFactoryTreadmill();
 
 %% Step 1.1: Try importing a session
 
-sessionId = 46;
+sessionId = 1;
 Exp = io.dataFactoryTreadmill(sessionId);
 
 % get directory to save QA figures in
@@ -413,13 +413,13 @@ frBaseS = zeros(NC,3);
 frStimR = zeros(NC,3);
 frStimS = zeros(NC,3);
 
-for cc = 1:NC
+for cc = 1:10%NC
     unitId = unitList(cc);
     [stimDir, robs, runSpd, opts] = bin_ssunit(D, unitId, 'win', [-.2 .2]);
     
     goodIx = getStableRange(sum(robs,2), 'plot', false);
     
-    stimDir = stimDir(goodIx);
+    stimDir = stimDir{1}(goodIx);
     robs = robs(goodIx,:);
     runSpd = runSpd{1}(goodIx,:);
     

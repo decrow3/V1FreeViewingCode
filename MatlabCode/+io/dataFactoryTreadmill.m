@@ -117,58 +117,88 @@ else % try importing the file
     % functions
     Exp = S.importFun(S); 
     
-    % --- get spikes from concatenated session file
-    fpath = fileparts(S.rawFilePath);
-    subj = S.processedFileName(1:strfind(S.processedFileName, '_')-1);
-    spikesfname = fullfile(fpath, [subj '_All_cat.mat']);
-    fprintf('Loading spikes from [%s]\n', spikesfname)
-    D = load(spikesfname);
+    supersessioning=0;
+    if supersessioning
+        % --- get spikes from concatenated session file
+        fpath = fileparts(S.rawFilePath);
+        subj = S.processedFileName(1:strfind(S.processedFileName, '_')-1);
+        spikesfname = fullfile(fpath, [subj '_All_cat.mat']);
+        fprintf('Loading spikes from [%s]\n', spikesfname)
+        D = load(spikesfname);
+
     
-    id = strfind(S.processedFileName,'_');
-    subj = S.processedFileName(1:id);
-    dat = datenum(S.processedFileName(id+(1:8)), 'yyyymmdd');
-    dateStr = [subj datestr(dat, 'yyyy-mm-dd')];
-    st = [];
-    clu = [];
-    
-    exname = strrep(S.processedFileName, '.mat', '');
-    figDir = fullfile(dataPath, 'imported_sessions_qa', exname);
-    if ~exist(figDir, 'dir')
-        mkdir(figDir)
-    end
-    
-    recId = find(contains(D.z.RecId, dateStr));
-    for rId = recId(:)'
-        
-        figure(rId); clf
-      
-        unitlist = find(cellfun(@(x) ~isempty(x), D.z.Times{rId}));
-        nUnits = numel(unitlist);
-        sx = ceil(sqrt(nUnits));
-        sy = round(sqrt(nUnits));
-        ax = plot.tight_subplot(sx, sy, 0.05);
-        
-        for iunit = 1:nUnits
-            kunit = unitlist(iunit);
-            
-            set(gcf, 'currentaxes', ax(iunit))
-            plot(squeeze(D.z.Shapes(:,kunit,:))', 'Linewidth', 2)
-            title(sprintf('Unit: %d', kunit))
-            
-            stmp = double(D.z.Times{rId}{kunit}) / D.z.Sampling;
-            st = [st; stmp];
-            clu = [clu; kunit*ones(numel(stmp),1)];
+        id = strfind(S.processedFileName,'_');
+        subj = S.processedFileName(1:id);
+        dat = datenum(S.processedFileName(id+(1:8)), 'yyyymmdd');
+        dateStr = [subj datestr(dat, 'yyyy-mm-dd')];
+        st = [];
+        clu = [];
+
+        exname = strrep(S.processedFileName, '.mat', '');
+        figDir = fullfile(dataPath, 'imported_sessions_qa', exname);
+        if ~exist(figDir, 'dir')
+            mkdir(figDir)
         end
-        
+
+        recId = find(contains(D.z.RecId, dateStr));
+        for rId = recId(:)'
+
+            figure(rId); clf
+
+            unitlist = find(cellfun(@(x) ~isempty(x), D.z.Times{rId}));
+            nUnits = numel(unitlist);
+            sx = ceil(sqrt(nUnits));
+            sy = round(sqrt(nUnits));
+            ax = plot.tight_subplot(sx, sy, 0.05);
+
+            for iunit = 1:nUnits
+                kunit = unitlist(iunit);
+
+                set(gcf, 'currentaxes', ax(iunit))
+                plot(squeeze(D.z.Shapes(:,kunit,:))', 'Linewidth', 2)
+                title(sprintf('Unit: %d', kunit))
+
+                stmp = double(D.z.Times{rId}{kunit}) / D.z.Sampling;
+                st = [st; stmp];
+                clu = [clu; kunit*ones(numel(stmp),1)];
+            end
+
+        end
+
+        plot.suplabel('Waveforms', 't');
+        plot.fixfigure(gcf, 10, [sy sx]*2)
+        saveas(gcf, fullfile(figDir, 'waveforms.pdf'))
+
+
+
+        Exp.osp = struct('st', st, 'clu', clu, 'cids', unitlist);
+    
+    else
+        %Load in spikes from spkilo.mat 
+        fpath = fileparts(S.rawFilePath);
+        Exp.osp = load(fullfile(S.rawFilePath, 'spkilo.mat'));
+        Exp.osp.st = Exp.osp.st + .6;
+        % move zero to the end
+        id = max(Exp.osp.clu)+1;
+
+        Exp.osp.clu(Exp.osp.clu==0) = id;
+        Exp.osp.cids = Exp.osp.cids2;
+        Exp.osp.cids(Exp.osp.cids==0) = id;
+
+        % Exp.osp.st = st_s.spikeTimes(:,1)+.6;
+        % Exp.osp.clu = st_s.spikeTimes(:,2);
+        % Exp.osp.depths = st_s.depths;
+        % Exp.osp.templates = st_s.templates;
+        % Exp.osp.cids = unique(Exp.osp.clu);
+
+
+        figure(1); clf
+        plot.raster(Exp.osp.st, Exp.osp.clu, 1)
+        ylabel('Unit ID')
+        xlabel('Time (seconds)')
     end
     
-    plot.suplabel('Waveforms', 't');
-    plot.fixfigure(gcf, 10, [sy sx]*2)
-    saveas(gcf, fullfile(figDir, 'waveforms.pdf'))
     
-    
-    
-    Exp.osp = struct('st', st, 'clu', clu, 'cids', unitlist);
     fprintf('Done\n')
 %     % some more meta data
 %     % some more meta data
